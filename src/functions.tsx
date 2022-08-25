@@ -1,3 +1,5 @@
+import {MotionPathPlugin} from 'gsap/MotionPathPlugin';
+
 import {
 	AnchorPoint,
 	Environment,
@@ -7,6 +9,32 @@ import {
 	Filter,
 	Release,
 } from './types';
+
+export function anchorsToProgress(rawPathInput: string, resolution = 12) {
+	resolution = ~~resolution;
+	const rawPath = MotionPathPlugin.getRawPath(rawPathInput);
+
+	MotionPathPlugin.cacheRawPathMeasurements(rawPath, resolution);
+	let progress = [0],
+		length,
+		s,
+		i,
+		e,
+		segment,
+		samples;
+	for (s = 0; s < rawPath.length; s++) {
+		segment = rawPath[s];
+		// @ts-ignore
+		samples = segment.samples;
+		e = segment.length - 6;
+		for (i = 0; i < e; i += 6) {
+			length = samples[(i / 6 + 1) * resolution - 1];
+			// @ts-ignore
+			progress.push(length / rawPath.totalLength);
+		}
+	}
+	return progress;
+}
 
 export function drawPath(anchorPoints: AnchorPoint[], controlPointOffset: number) {
 	return anchorPoints

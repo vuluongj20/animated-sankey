@@ -10,6 +10,7 @@ export const GlobalStyles = createGlobalStyle`
     background-color: ${p => p.theme.backgroundSecondary};
     color: ${p => p.theme.textColor};
     padding: ${p => p.theme.space[4]};
+    font-size: 14px;
   }
 
   code {
@@ -19,5 +20,26 @@ export const GlobalStyles = createGlobalStyle`
   h1, h2, h3, h4, h5, h6 {
     color: ${p => p.theme.headingColor};
     font-weight: 500;
+    margin-top: 0;
+    margin-bottom: 0.4em;
+  }
+
+  p {
+    margin-top: 0;
+    margin-bottom: 0.4em;
+  }
+
+  small {
+    color: ${p => p.theme.subText};
+    font-size: ${p => p.theme.fontSizeSmall};
+  }
+
+  input {
+    font-size: 1rem;
+    transition: color, box-shadow ${p => p.theme.animation.vFastOut};
+  }
+  input:focus {
+    outline: none;
+    ${p => p.theme.utils.focusVisible}; 
   }
 `;

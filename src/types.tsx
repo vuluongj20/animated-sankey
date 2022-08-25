@@ -6,7 +6,6 @@ export enum EventType {
 export enum Environment {
 	Prod = 'prod',
 	Stage = 'stage',
-	Dev = 'dev',
 }
 
 export enum Release {
@@ -33,6 +32,8 @@ export type Event = {
 	removed?: boolean;
 	removalType?: EventRemovalType;
 	path?: string;
+	pathActive?: string;
+	pathInactive?: string;
 };
 
 export type Filter = {

@@ -552,13 +552,57 @@ const iconSizes = {
   xxl: '72px',
 };
 
+const easings = {
+  inSine: 'cubic-bezier(0.12, 0, 0.39, 0)',
+  outSine: 'cubic-bezier(0.61, 1, 0.88, 1)',
+  inOutSine: 'cubic-bezier(0.37, 0, 0.63, 1)',
+  inQuad: 'cubic-bezier(0.11, 0, 0.5, 0)',
+  outQuad: 'cubic-bezier(0.5, 1, 0.89, 1)',
+  inOutQuad: 'cubic-bezier(0.45, 0, 0.55, 1)',
+  inCubic: 'cubic-bezier(0.32, 0, 0.67, 0)',
+  outCubic: 'cubic-bezier(0.33, 1, 0.68, 1)',
+  inOutCubic: 'cubic-bezier(0.65, 0, 0.35, 1)',
+  inQuart: 'cubic-bezier(0.5, 0, 0.75, 0)',
+  outQuart: 'cubic-bezier(0.25, 1, 0.5, 1)',
+  inOutQuart: 'cubic-bezier(0.76, 0, 0.24, 1)',
+  inQuint: 'cubic-bezier(0.64, 0, 0.78, 0)',
+  outQuint: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  inOutQuint: 'cubic-bezier(0.83, 0, 0.17, 1)',
+  inExpo: 'cubic-bezier(0.7, 0, 0.84, 0)',
+  outExpo: 'cubic-bezier(0.16, 1, 0.3, 1)',
+  inOutExpo: 'cubic-bezier(0.87, 0, 0.13, 1)',
+  inCirc: 'cubic-bezier(0.55, 0, 1, 0.45)',
+  outCirc: 'cubic-bezier(0, 0.55, 0.45, 1)',
+  inOutCirc: 'cubic-bezier(0.85, 0, 0.15, 1)',
+  inBack: 'cubic-bezier(0.36, 0, 0.66, -0.56)',
+  outBack: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+  inOutBack: 'cubic-bezier(0.68, -0.6, 0.32, 1.6)',
+};
+
 const commonTheme = {
+  opacityFactor: 1,
   breakpoints: {
     small: '800px',
     medium: '992px',
     large: '1200px',
     xlarge: '1440px',
     xxlarge: '2560px',
+  },
+
+  animation: {
+    ...easings,
+    vFastIn: `0.125s ${easings.inQuad}`,
+    vFastOut: `0.125s ${easings.outQuad}`,
+    vFastInOut: `0.125s ${easings.inOutQuad}`,
+    fastIn: `0.25s ${easings.inQuart}`,
+    fastOut: `0.25s ${easings.outQuart}`,
+    fastInOut: `0.25s ${easings.inOutQuart}`,
+    mediumIn: `0.5s ${easings.inQuart}`,
+    mediumOut: `0.5s ${easings.outQuart}`,
+    mediumInOut: `0.5s ${easings.inOutQuart}`,
+    slowIn: `0.75s ${easings.inCubic}`,
+    slowOut: `0.75s ${easings.outCubic}`,
+    slowInOut: `0.75s ${easings.inOutCubic}`,
   },
 
   space: {
@@ -569,8 +613,9 @@ const commonTheme = {
     1: '8px',
     1.5: '12px',
     2: '16px',
-    3: '20px',
-    4: '30px',
+    3: '24px',
+    4: '36px',
+    5: '48px',
   },
 
   ...lightColors,
@@ -584,6 +629,14 @@ const commonTheme = {
     right: '90',
     down: '180',
     left: '270',
+  },
+
+  vbreakpoints: {
+    xl: '90rem', // 1440px
+    l: '78rem', // 1248px
+    m: '64rem', // 1024px
+    s: '48rem', // 768px
+    xs: '30rem', // 480px
   },
 
   // Try to keep these ordered plz
@@ -806,6 +859,51 @@ const commonTheme = {
 const lightAliases = generateAliases(lightColors);
 const darkAliases = generateAliases(darkColors);
 
+const generateUtils = (
+  theme: typeof commonTheme & typeof lightColors & typeof lightAliases
+) => ({
+  spread: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+  },
+  flexCenter: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  absCenter: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+  },
+  focusVisible: {
+    outline: 'none',
+    boxShadow: `0 0 0 1px ${theme.active}`,
+    borderColor: theme.active,
+    zIndex: 1,
+  },
+  svgFocusVisible: {
+    strokeWidth: 3,
+    stroke: theme.focus,
+    zIndex: 1,
+  },
+  media: {
+    xs: `@media only screen and (max-width: ${theme.vbreakpoints.xs})`,
+    s: `@media only screen and (max-width: ${theme.vbreakpoints.s})`,
+    m: `@media only screen and (max-width: ${theme.vbreakpoints.m})`,
+    l: `@media only screen and (max-width: ${theme.vbreakpoints.l})`,
+    xl: `@media only screen and (max-width: ${theme.vbreakpoints.xl})`,
+    mobile: `@media only screen and (max-width: ${theme.vbreakpoints.s}), only screen and (max-height: ${theme.vbreakpoints.s})`,
+  },
+  defaultTransitions: `background-color 0.5s ${theme.animation.outQuart}, 
+          border-color 0.5s ${theme.animation.outQuart},
+          box-shadow 0.5s ${theme.animation.outQuart}`,
+});
+
 export const lightTheme = {
   ...commonTheme,
   ...lightColors,
@@ -815,6 +913,7 @@ export const lightTheme = {
     ...darkColors,
     ...darkAliases,
   },
+  utils: generateUtils({...commonTheme, ...lightColors, ...lightAliases}),
   alert: generateAlertTheme(lightColors, lightAliases),
   badge: generateBadgeTheme(lightColors),
   button: generateButtonTheme(lightColors, lightAliases),
@@ -837,6 +936,7 @@ export const darkTheme: Theme = {
     ...lightColors,
     ...lightAliases,
   },
+  utils: generateUtils({...commonTheme, ...darkColors, ...darkAliases}),
   alert: generateAlertTheme(darkColors, darkAliases),
   badge: generateBadgeTheme(darkColors),
   button: generateButtonTheme(darkColors, darkAliases),
