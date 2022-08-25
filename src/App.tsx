@@ -1,26 +1,22 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import styled from 'styled-components';
+
+import Canvas from './canvas';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Wrap>
+      <Canvas />
+    </Wrap>
   );
 }
 
 export default App;
+
+const Wrap = styled('div')`
+  max-width: 48rem;
+  background: ${p => p.theme.background};
+  border: solid 1px ${p => p.theme.innerBorder};
+  border-radius: ${p => p.theme.borderRadiusLarge};
+  padding: ${p => p.theme.space[3]};
+  margin: 0 auto;
+`;
