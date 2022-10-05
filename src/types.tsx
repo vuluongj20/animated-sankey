@@ -44,4 +44,6 @@ export type Filter = {
 	x: number;
 	yActive: [number, number];
 	yInactive?: [number, number];
+	label?: string;
+	labelYOffset?: number;
 };

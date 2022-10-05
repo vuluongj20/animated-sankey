@@ -23,14 +23,14 @@ function App() {
   }
 
   const [filterRates, setFilterRates] = useState({
-    sampleRate: 0.5,
-    traceSampleRate: 0.2,
+    sampleRate: 1,
+    traceSampleRate: 0.5,
     serverError: 1,
-    serverPerformance: 0.5,
-    serverReleaseV1: 1,
+    serverPerformance: 0.25,
+    serverReleaseV1: 0.5,
     serverReleaseV2: 1,
     serverEnvironmentProd: 1,
-    serverEnvironmentStage: 1,
+    serverEnvironmentStage: 0.25,
   });
   function onFilterRateChange(name: keyof typeof filterRates, value: number) {
     setFilterRates({
@@ -87,7 +87,7 @@ function App() {
           />
         </Column>
         <Column>
-          <SectionTitle>Client-Side</SectionTitle>
+          <SectionTitle>Client-Side Sampling</SectionTitle>
           <NumberField
             label="sampleRate"
             description="Error sample rate."
@@ -104,7 +104,7 @@ function App() {
           />
         </Column>
         <Column>
-          <SectionTitle>Server-Side</SectionTitle>
+          <SectionTitle>Server-Side Sampling</SectionTitle>
           <SectionSubtitle>Inbound Data Filters</SectionSubtitle>
           <CheckboxLabel>
             <CheckInput
@@ -168,28 +168,28 @@ function App() {
           />
           <NumberField
             label="Release = v1"
-            description="Sample rate for transactions from V1."
+            description="Transactions from release V1."
             value={filterRates.serverReleaseV1}
             onChange={val => onFilterRateChange('serverReleaseV1', val)}
             {...inputProps}
           />
           <NumberField
             label="Release = v2"
-            description="Sample rate for transactions from V2."
+            description="Transactions from release V2."
             value={filterRates.serverReleaseV2}
             onChange={val => onFilterRateChange('serverReleaseV2', val)}
             {...inputProps}
           />
           <NumberField
             label="Environment = prod"
-            description="Sample rate for transactions in prod."
+            description="Transactions from prod."
             value={filterRates.serverEnvironmentProd}
             onChange={val => onFilterRateChange('serverEnvironmentProd', val)}
             {...inputProps}
           />
           <NumberField
             label="Environment = stage"
-            description="Sample rate for transactions from stage."
+            description="Transactions from stage."
             value={filterRates.serverEnvironmentStage}
             onChange={val => onFilterRateChange('serverEnvironmentStage', val)}
             {...inputProps}
@@ -209,7 +209,7 @@ function App() {
 export default App;
 
 const Wrap = styled('div')`
-  max-width: 64rem;
+  max-width: 68rem;
   background: ${p => p.theme.background};
   border: solid 1px ${p => p.theme.innerBorder};
   border-radius: ${p => p.theme.borderRadiusLarge};
@@ -218,9 +218,10 @@ const Wrap = styled('div')`
 `;
 
 const SamplingGrid = styled('div')`
+  width: calc(100% - 7rem);
   display: grid;
   grid-template-columns: 25% 30% 45%;
-  margin-bottom: ${p => p.theme.space[4]};
+  margin-bottom: ${p => p.theme.space[5]};
 `;
 
 const Column = styled('div')`

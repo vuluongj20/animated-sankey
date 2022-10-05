@@ -35,7 +35,9 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   input {
-    font-size: 1rem;
+    appearance: none;
+    margin: 0;
+    font-size: inherit;
     transition: color, box-shadow ${p => p.theme.animation.vFastOut};
   }
   input:focus {

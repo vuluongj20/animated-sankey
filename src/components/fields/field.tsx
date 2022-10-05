@@ -58,7 +58,7 @@ const Wrap = styled.div<{rowLayout: boolean; small: boolean}>`
 					grid-template-columns: 1fr max-content;
 					align-items: center;
 					justify-items: end;
-					padding: ${p.theme.space[2]} 0;
+					padding: ${p.theme.space[1.5]} 0;
 
 					:not(:last-child) {
 						border-bottom: solid 1px ${p.theme.innerBorder};

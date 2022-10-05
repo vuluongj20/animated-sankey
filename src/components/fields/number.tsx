@@ -89,6 +89,7 @@ const IncDecWrap = styled.div`
 const IncDecButton = styled(Button)`
 	height: 50%;
 	padding: 0;
+	margin: 0;
 	background: ${p => p.theme.background};
 	border-radius: 0;
 	:not(:first-child) {
@@ -110,7 +111,7 @@ const Input = styled.input<{small: boolean; displayWidth?: string}>`
 	padding: ${p =>
 		p.small
 			? `${p.theme.space[0]} ${p.theme.space[1]}`
-			: `${p.theme.space[0.75]} ${p.theme.space[1]}`};
+			: `${p.theme.space[0.5]} ${p.theme.space[0.75]}`};
 	padding-right: ${p => p.theme.space[3]};
 
 	${p => p.displayWidth && `width: ${p.displayWidth}`}

@@ -39,7 +39,7 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 		if (events.length === 0) return;
 		setIsStale(true);
 		setTimeout(() => timeline.current?.pause(), 500);
-	}, [population, filterRates]);
+	}, [population, filterRates, inboundFilterRate]);
 
 	// On restart
 	function restart() {
@@ -106,6 +106,7 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 		return [
 			{
 				name: 'sampleRate',
+				label: 'sampleRate',
 				conditions: [{property: 'type', value: EventType.Error}],
 				removalType: EventRemovalType.Discarded,
 				retentionRate: filterRates.sampleRate,
@@ -114,6 +115,7 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 			},
 			{
 				name: 'traceSampleRate',
+				label: 'traceSampleRate',
 				conditions: [{property: 'type', value: EventType.Performance}],
 				removalType: EventRemovalType.Discarded,
 				retentionRate: filterRates.traceSampleRate,
@@ -122,6 +124,7 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 			},
 			{
 				name: 'inboundFilterError',
+				label: 'Inbound Data Filters',
 				conditions: [{property: 'type', value: EventType.Error}],
 				removalType: EventRemovalType.Discarded,
 				retentionRate: inboundFilterRate,
@@ -138,6 +141,8 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 			},
 			{
 				name: 'serverPerformance',
+				label: 'Custom Rules',
+				labelYOffset: -4,
 				conditions: [{property: 'type', value: EventType.Performance}],
 				removalType: EventRemovalType.Dropped,
 				retentionRate: filterRates.serverPerformance,
@@ -191,40 +196,80 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 		];
 	}, [filterRates, inboundFilterRate, populationRates]);
 
-	const yEndBands: Parameters<typeof processEvents>[2] = useMemo(() => {
-		const popSum = population.error + population.performance;
-		const popRates = {
-			error: population.error / popSum,
-			performance: population.performance / popSum,
-		};
+	const finalRates = useMemo(() => {
+		const typeRates = populationRates.type;
+		const releaseRates = populationRates.release;
+		const environmentRates = populationRates.environment;
 		const filterRates = Object.fromEntries(filters.map(f => [f.name, f.retentionRate]));
 		const finalRates = {
-			indexed:
-				popRates.error * filterRates.sampleRate * filterRates.inboundFilterError +
-				popRates.performance *
+			indexed: {
+				error: typeRates.error * filterRates.sampleRate * filterRates.inboundFilterError,
+				performance:
+					typeRates.performance *
 					filterRates.traceSampleRate *
 					filterRates.inboundFilterPerformance *
-					filterRates.serverPerformance,
-			dropped: 0,
-			discarded: 0,
+					filterRates.serverPerformance *
+					(1 - releaseRates.v1 * (1 - filterRates.serverReleaseV1)) *
+					(1 - releaseRates.v2 * (1 - filterRates.serverReleaseV2)) *
+					(1 - environmentRates.prod * (1 - filterRates.serverEnvironmentProd)) *
+					(1 - environmentRates.stage * (1 - filterRates.serverEnvironmentStage)),
+			},
+			dropped: {error: 0, performance: 0},
+			discarded: {error: 0, performance: 0},
 		};
-		finalRates.dropped =
-			popRates.error * filterRates.sampleRate * filterRates.inboundFilterError +
-			popRates.performance *
+
+		finalRates.dropped.error =
+			typeRates.error * filterRates.sampleRate * filterRates.inboundFilterError -
+			finalRates.indexed.error;
+		finalRates.dropped.performance =
+			typeRates.performance *
 				filterRates.traceSampleRate *
 				filterRates.inboundFilterPerformance -
-			finalRates.indexed;
-		finalRates.discarded = 1 - finalRates.indexed - finalRates.dropped;
+			finalRates.indexed.performance;
 
+		finalRates.discarded.error =
+			typeRates.error - finalRates.indexed.error - finalRates.dropped.error;
+		finalRates.discarded.performance =
+			typeRates.performance -
+			finalRates.indexed.performance -
+			finalRates.dropped.performance;
+
+		return finalRates;
+	}, [populationRates, filters]);
+
+	const finalCounts = useMemo(() => {
+		const popSum = population.error + population.performance;
 		return {
-			indexed: [0, finalRates.indexed * 0.8],
-			[EventRemovalType.Dropped]: [
-				finalRates.indexed * 0.8 + 0.1,
-				finalRates.indexed * 0.8 + 0.1 + finalRates.dropped * 0.8,
-			],
-			[EventRemovalType.Discarded]: [1 - finalRates.discarded * 0.8, 1],
+			indexed: {
+				error: Math.round(popSum * finalRates.indexed.error),
+				performance: Math.round(popSum * finalRates.indexed.performance),
+			},
+			dropped: {
+				error: Math.round(popSum * finalRates.dropped.error),
+				performance: Math.round(popSum * finalRates.dropped.performance),
+			},
+			discarded: {
+				error: Math.round(popSum * finalRates.discarded.error),
+				performance: Math.round(popSum * finalRates.discarded.performance),
+			},
 		};
-	}, [population, filters, populationRates]);
+	}, [population, finalRates]);
+
+	const yEndBands: Parameters<typeof processEvents>[2] = useMemo(() => {
+		const combinedFinalRates = {
+			indexed: finalRates.indexed.error + finalRates.indexed.performance,
+			dropped: finalRates.dropped.error + finalRates.dropped.performance,
+			discarded: finalRates.discarded.error + finalRates.discarded.performance,
+		};
+		return {
+			indexed: [0, combinedFinalRates.indexed * 0.8],
+			[EventRemovalType.Dropped]: [
+				combinedFinalRates.indexed * 0.8 + 0.1,
+				combinedFinalRates.indexed * 0.8 + 0.1 + combinedFinalRates.dropped * 0.8,
+			],
+			[EventRemovalType.Discarded]: [1 - combinedFinalRates.discarded * 0.8, 1],
+		};
+	}, [finalRates]);
 
 	const initialize = useCallback(() => {
 		if (!width || !height || !canvasRef.current) return;
@@ -302,68 +347,118 @@ const Canvas = ({population, filterRates, inboundFilterRate}: CanvasProps) => {
 		});
 
 		tl.play();
-	}, [width, height, population, filterRates]);
+	}, [width, height, filters, populationRates, yEndBands]);
 
 	return (
-		<Wrap ref={wrapRef}>
-			<SVG viewBox={`0 0 ${width} ${height}`} style={{zIndex: 0}} isStale={isStale}>
-				<g className="event-paths">
-					{events.slice(0, 750).map((e, i) => (
-						<Fragment key={i}>
-							<path
-								d={e.removed ? e.pathActive : e.path}
-								stroke={e.type === 'error' ? '#ff5555' : '#5555ff'}
-							/>
-							<path d={e.pathInactive} stroke="#999999" />
-						</Fragment>
-					))}
-				</g>
-			</SVG>
-			<CanvasElement ref={canvasRef} isStale={isStale} />
-			<SVG viewBox={`0 0 ${width} ${height}`} style={{zIndex: 2}} isStale={isStale}>
-				<g className="filters">
-					{width &&
-						height &&
-						filters.map(f => {
-							const x = f.x * width;
-							const y0 = f.yActive[0] * height;
-							const y1 = f.yActive[1] * height;
-							const yInflection =
-								(f.yActive[0] + (f.yActive[1] - f.yActive[0]) * f.retentionRate) * height;
+		<Wrap>
+			<MainWrap ref={wrapRef}>
+				<SVG viewBox={`0 0 ${width} ${height}`} style={{zIndex: 0}} isStale={isStale}>
+					<g className="event-paths">
+						{events.slice(0, 750).map((e, i) => (
+							<Fragment key={i}>
+								<path
+									d={e.removed ? e.pathActive : e.path}
+									stroke={e.type === 'error' ? '#ff5555' : '#5555ff'}
+								/>
+								<path d={e.pathInactive} stroke="#999999" />
+							</Fragment>
+						))}
+					</g>
+				</SVG>
+				<CanvasElement ref={canvasRef} isStale={isStale} />
+				<SVG viewBox={`0 0 ${width} ${height}`} style={{zIndex: 2}} isStale={isStale}>
+					<g className="filters">
+						{width &&
+							height &&
+							filters.map(f => {
+								const x = f.x * width;
+								const y0 = f.yActive[0] * height;
+								const y1 = f.yActive[1] * height;
+								const yInflection =
+									(f.yActive[0] + (f.yActive[1] - f.yActive[0]) * f.retentionRate) *
+									height;
 
-							const markOffset = 2;
+								const markOffset = 2;
 
-							return (
-								<g className="filter-group" id={`filter-${f.name}`} key={f.name}>
-									<path
-										className="filter-mark"
-										d={`M ${x - markOffset} ${y0} h ${markOffset * 2}`}
-									/>
-									<path
-										className="filter-line retained"
-										d={`M ${x} ${y0} L ${x} ${yInflection}`}
-									/>
-									<path
-										className="filter-mark"
-										d={`M ${x - markOffset} ${yInflection} h ${markOffset * 2}`}
-									/>
-									<path
-										className="filter-line removed"
-										d={`M ${x} ${yInflection} L ${x} ${y1}`}
-									/>
-									<path
-										className="filter-mark"
-										d={`M ${x - markOffset} ${y1} h ${markOffset * 2}`}
-									/>
-								</g>
-							);
-						})}
-				</g>
-			</SVG>
+								return (
+									<g className="filter-group" id={`filter-${f.name}`} key={f.name}>
+										{f.label && (
+											<text
+												className="filter-label"
+												x={x - 3}
+												y={y0 - 4 + (f.labelYOffset ?? 0)}
+											>
+												{f.label}
+											</text>
+										)}
+										<path
+											className="filter-mark"
+											d={`M ${x - markOffset} ${y0} h ${markOffset * 2}`}
+										/>
+										<path
+											className="filter-line retained"
+											d={`M ${x} ${y0} L ${x} ${yInflection}`}
+										/>
+										<path
+											className="filter-mark"
+											d={`M ${x - markOffset} ${yInflection} h ${markOffset * 2}`}
+										/>
+										<path
+											className="filter-line removed"
+											d={`M ${x} ${yInflection} L ${x} ${y1}`}
+										/>
+										<path
+											className="filter-mark"
+											d={`M ${x - markOffset} ${y1} h ${markOffset * 2}`}
+										/>
+									</g>
+								);
+							})}
+					</g>
+				</SVG>
 
-			<RestartButton visible={isStale} onPress={restart} showBorder>
-				Restart
-			</RestartButton>
+				<RestartButton visible={isStale} onPress={restart} showBorder>
+					Restart
+				</RestartButton>
+			</MainWrap>
+
+			<CountWrap>
+				<CountRow top={yEndBands.indexed[0]} bottom={yEndBands.indexed[1]}>
+					<CountLabel>Indexed</CountLabel>
+					<CountError>
+						{finalCounts.indexed.error}
+						<CountUnit>&nbsp;errors</CountUnit>
+					</CountError>
+					<CountPerformance>
+						{finalCounts.indexed.performance}
+						<CountUnit>&nbsp;trans.</CountUnit>
+					</CountPerformance>
+				</CountRow>
+
+				<CountRow top={yEndBands.dropped[0]} bottom={yEndBands.dropped[1]}>
+					<CountLabel>Dropped</CountLabel>
+					<CountError>
+						{finalCounts.dropped.error}
+						<CountUnit>&nbsp;errors</CountUnit>
+					</CountError>
+					<CountPerformance>
+						{finalCounts.dropped.performance}
+						<CountUnit>&nbsp;trans.</CountUnit>
+					</CountPerformance>
+				</CountRow>
+
+				<CountRow top={yEndBands.discarded[0]} bottom={yEndBands.discarded[1]}>
+					<CountLabel>Discarded</CountLabel>
+					<CountError>
+						{finalCounts.discarded.error}
+						<CountUnit>&nbsp;errors</CountUnit>
+					</CountError>
+					<CountPerformance>
+						{finalCounts.discarded.performance}
+						<CountUnit>&nbsp;trans.</CountUnit>
+					</CountPerformance>
+				</CountRow>
+			</CountWrap>
 		</Wrap>
 	);
 };
@@ -375,6 +470,61 @@ const Wrap = styled('div')`
 	width: 100%;
 	height: 20rem;
 	display: flex;
+	margin-bottom: ${p => p.theme.space[2]};
+`;
+
+const MainWrap = styled('div')`
+	position: relative;
+	width: 100%;
+	height: 100%;
+`;
+
+const CountWrap = styled('div')`
+	flex-shrink: 0;
+	width: 7rem;
+	position: relative;
+	height: 100%;
+`;
+
+const CountRow = styled('div')<{top: number; bottom: number}>`
+	position: absolute;
+	width: 100%;
+	top: ${p => p.top * 100}%;
+	bottom: calc(100% - ${p => p.bottom * 100}%);
+	padding: 0 ${p => p.theme.space[2]};
+
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+`;
+
+const CountLabel = styled('p')`
+	font-weight: 500;
+	font-size: 10px;
+	color: ${p => p.theme.subText};
+	opacity: 0.75;
+	text-transform: uppercase;
+	margin-bottom: 0;
+`;
+
+const CountError = styled('p')`
+	font-weight: 500;
+	color: #ff5555;
+	opacity: 1;
+	margin-bottom: 0;
+`;
+
+const CountPerformance = styled('p')`
+	font-weight: 500;
+	color: #5555ff;
+	opacity: 1;
+	margin-bottom: 0;
+`;
+
+const CountUnit = styled('small')`
+	font-size: ${p => p.theme.fontSizeExtraSmall};
+	color: inherit;
+	opacity: 0.75;
 `;
 
 const RestartButton = styled(Button)<{visible: boolean}>`
@@ -390,6 +540,9 @@ const RestartButton = styled(Button)<{visible: boolean}>`
 `;
 
 const CanvasElement = styled('canvas')<{isStale: boolean}>`
+	width: 100%;
+	height: 100%;
+	position: relative;
 	z-index: 1;
 	transition: opacity ${p => p.theme.animation.mediumOut};
 	${p => p.isStale && `opacity: 0;`}
@@ -428,5 +581,11 @@ const SVG = styled('svg')<{isStale: boolean}>`
 		stroke-opacity: 0.5;
 		stroke-width: 2;
 		stroke-linecap: round;
+	}
+
+	text.filter-label {
+		fill: ${p => p.theme.subText};
+		font-size: 10px;
+		font-weight: 500;
 	}
 `;

@@ -48,7 +48,7 @@ const Input = styled.input<{small: boolean; displayWidth?: string}>`
 	padding: ${p =>
 		p.small
 			? `${p.theme.space[0]} ${p.theme.space[1]}`
-			: `${p.theme.space[0.75]} ${p.theme.space[1]}`};
+			: `${p.theme.space[0.5]} ${p.theme.space[0.75]}`};
 
 	${p => p.displayWidth && `width: ${p.displayWidth}`}
 `;

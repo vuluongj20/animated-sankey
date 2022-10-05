@@ -5,8 +5,8 @@ const getPosition = ({borderWidth = 0}) => {
 		position: absolute;
 		top: 50%;
 		left: 50%;
-		width: calc(100% + ${borderWidth * 2}px);
-		height: calc(100% + ${borderWidth * 2}px);
+		width: calc(100% + ${0}px);
+		height: calc(100% + ${0}px);
 		transform: translate(-50%, -50%);
 	`;
 };
